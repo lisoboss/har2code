@@ -1,6 +1,8 @@
 """har2code package."""
 
+from .main import main as main_func
+
 
 def main() -> None:
     """Run the main function."""
-    print("Hello from har2code!")
+    return main_func()
