@@ -14,7 +14,7 @@ def main():
     parser.add_argument(
         "--library",
         choices=["requests", "httpx"],
-        default="httpx",
+        default="requests",
         help="Python library to use for the generated code.",
     )
     args = parser.parse_args()

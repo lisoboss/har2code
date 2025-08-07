@@ -4,6 +4,7 @@ import base64
 import json
 import secrets
 from dataclasses import asdict
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 from urllib.parse import parse_qs
@@ -158,9 +159,11 @@ def parse_codes(har_data: Dict[str, Any]) -> List[code.PythonCode]:
     for entry in entries:
         codes.append(
             code.PythonCode(
+                timestamp=datetime.fromisoformat(entry.startedDateTime).timestamp(),
                 time=f"{entry.time}, {entry.startedDateTime}",
+                datetime=entry.startedDateTime,
                 request=parse_request(entry.request),
                 response=parse_response(entry.response),
             )
         )
-    return codes
+    return sorted(codes, key=lambda x: x.timestamp)

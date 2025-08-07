@@ -65,15 +65,35 @@ def to_request(request: py_code.Request) -> List[str]:
     return code_str
 
 
+def to_code_head(code: py_code.PythonCode) -> List[str]:
+    """Convert code head to string."""
+    code_str = []
+    code_str.append("############## ======== HAR2CODE ======== ###############")
+    code_str.append(f"# timestamp: {code.timestamp}")
+    code_str.append(f"# time: {code.time}")
+    code_str.append(f"# datetime: {code.datetime}")
+    code_str.append("#")
+    return code_str
+
+
+def to_code_tail(code: py_code.PythonCode) -> List[str]:
+    """Convert code tail to string."""
+    code_str = []
+    code_str.append("")
+    code_str.append("")
+    return code_str
+
+
 def to_httpx(codes: List[py_code.PythonCode]) -> str:
     """Convert HAR data to Python httpx code."""
     code_str = []
     code_str.append("import httpx")
     for code in codes:
-        code_str.append("############## ======== HAR2CODE ======== ###############")
-        code_str.append(f"# time: {code.time}")
         request = code.request
         response = code.response
+
+        # code head
+        code_str.extend(to_code_head(code))
 
         # request
         code_str.extend(to_request(request))
@@ -85,7 +105,9 @@ def to_httpx(codes: List[py_code.PythonCode]) -> str:
 
         # response
         code_str.extend(to_response(response))
-        code_str.append("")
+
+        # code tail
+        code_str.extend(to_code_tail(code))
     return "\n".join(code_str)
 
 
@@ -94,10 +116,11 @@ def to_requests(codes: List[py_code.PythonCode]) -> str:
     code_str = []
     code_str.append("import requests")
     for code in codes:
-        code_str.append("############## ======== HAR2CODE ======== ###############")
-        code_str.append(f"# time: {code.time}")
         request = code.request
         response = code.response
+
+        # code head
+        code_str.extend(to_code_head(code))
 
         # request
         code_str.extend(to_request(request))
@@ -108,5 +131,7 @@ def to_requests(codes: List[py_code.PythonCode]) -> str:
 
         # response
         code_str.extend(to_response(response))
-        code_str.append("")
+
+        # code tail
+        code_str.extend(to_code_tail(code))
     return "\n".join(code_str)

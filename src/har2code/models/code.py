@@ -63,6 +63,8 @@ class Response:
 class PythonCode:
     """Define the data model for python code."""
 
+    timestamp: float
     time: str
+    datetime: str
     request: Request
     response: Response
