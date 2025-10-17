@@ -7,9 +7,9 @@ from dataclasses import asdict
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
-from urllib.parse import parse_qs
+from urllib.parse import parse_qs, urlparse
 
-from .mime import mime_parse, mime_to_extension
+from .mime import guess_extension, mime_parse
 from .models import code, har
 
 OUTPUT = Path("out")
@@ -18,42 +18,38 @@ with open(OUTPUT / ".gitignore", "w") as f:
     f.write("*")
 
 
-def parse_content(content: har.Content) -> str:
+def parse_content(content: har.Content, exclude_exts: List[str], url_path: str) -> str:
     """Parse content and add code to the list."""
     mime, encoding = mime_parse(content.mimeType)
     content_encoding = content.encoding
-    content_text = content.text
-    if content.size > 0:
-        if content_encoding is None:
-            pass
-        elif content_encoding == "base64":
+    content_text = content.text or ""
+    raw_content = None
+    filename = None
+
+    if content.size is not None and content.size > 0:
+        ext = guess_extension(mime, url_path)
+
+        if content_encoding is not None and content_encoding == "base64":
             raw_content = base64.b64decode(content_text or "")
-            if (
-                mime is None
-                or mime.startswith("text/")
-                or mime
-                in (
-                    "application/json",
-                    "application/javascript",
-                    "application/xml",
-                    "application/x-www-form-urlencoded",
-                    "application/vnd.api+json",
-                )
-            ):
+
+        if ext.lstrip(".") not in exclude_exts:
+            if raw_content is None:
+                raw_content = content_text.encode()
+
+            filename = OUTPUT / f"binary-{secrets.token_hex(4)}{ext}"
+        else:
+            if raw_content is not None:
                 try:
                     content_text = raw_content.decode(encoding)
                 except UnicodeDecodeError:
                     # fallback: 保存为 bin
                     filename = OUTPUT / f"unknown-{secrets.token_hex(4)}.bin"
-                    with open(filename, "wb") as f:
-                        f.write(raw_content)
-                    content_text = f"=== Save to file: {filename} ==="
-            else:
-                ext = mime_to_extension(mime)
-                filename = OUTPUT / f"binary-{secrets.token_hex(4)}{ext}"
-                with open(filename, "wb") as f:
-                    f.write(raw_content)
-                content_text = f"=== Save to file: {filename} ==="
+
+        if filename is not None and raw_content is not None:
+            with open(filename, "wb") as f:
+                f.write(raw_content)
+            content_text = f"=== Save to file: {filename} ==="
+
     return content_text or ""
 
 
@@ -125,13 +121,15 @@ def parse_cookie(cookie: har.Cookie) -> code.Cookie | None:
         return None
 
 
-def parse_response(response: har.Response) -> code.Response:
+def parse_response(
+    response: har.Response, exclude_exts: List[str], url_path: str
+) -> code.Response:
     """Parse response and add code to the list."""
     return code.Response(
         status=response.status,
         httpVersion=response.httpVersion,
         headers=response.headers,
-        content=parse_content(response.content),
+        content=parse_content(response.content, exclude_exts, url_path),
     )
 
 
@@ -152,7 +150,9 @@ def parse_request(request: har.Request) -> code.Request:
     return code.Request(**kwargs)
 
 
-def parse_codes(har_data: Dict[str, Any]) -> List[code.PythonCode]:
+def parse_codes(
+    har_data: Dict[str, Any], exclude_exts: List[str]
+) -> List[code.PythonCode]:
     """Parse HAR data to Python code."""
     entries = har.Har.from_dict(har_data).entries
     codes = []
@@ -163,7 +163,9 @@ def parse_codes(har_data: Dict[str, Any]) -> List[code.PythonCode]:
                 time=f"{entry.time}, {entry.startedDateTime}",
                 datetime=entry.startedDateTime,
                 request=parse_request(entry.request),
-                response=parse_response(entry.response),
+                response=parse_response(
+                    entry.response, exclude_exts, urlparse(entry.request.url).path
+                ),
             )
         )
     return sorted(codes, key=lambda x: x.timestamp)

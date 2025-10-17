@@ -11,3 +11,4 @@ wheels/
 
 #
 .envrc
+.DS_Store

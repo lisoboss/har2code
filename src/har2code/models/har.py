@@ -31,11 +31,11 @@ class Cookie:
 
     name: str
     value: str
-    path: str
-    domain: str
-    expires: str
-    httpOnly: bool
-    secure: bool
+    path: Optional[str]
+    domain: Optional[str]
+    expires: Optional[str]
+    httpOnly: Optional[bool]
+    secure: Optional[bool]
     comment: Optional[str]
 
 
@@ -127,7 +127,7 @@ class Content:
     }
     """
 
-    size: int
+    size: Optional[int]
     compression: Optional[int]
     mimeType: Optional[str]
     text: Optional[str]

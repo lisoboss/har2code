@@ -33,6 +33,7 @@ class Cookie:
     expires: str
     httpOnly: bool
     secure: bool
+    comment: str
 
 
 @dataclass

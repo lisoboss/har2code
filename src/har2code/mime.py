@@ -1,13 +1,16 @@
 """Define the tools for MIME type."""
 
 import cgi
+import json
 import mimetypes
-from typing import Tuple
+import os
+from typing import List, Optional, Tuple
 
 _office_document = "application/vnd.openxmlformats-officedocument"
 FALLBACK_MIME_MAP = {
     "application/json": ".json",
     "application/javascript": ".js",
+    "application/x-javascript": ".js",
     "application/xml": ".xml",
     "text/html": ".html",
     "text/plain": ".txt",
@@ -33,6 +36,15 @@ FALLBACK_MIME_MAP = {
 }
 
 
+def load_custom_fallback_mime_map(filename: str) -> None:
+    """Load custom MIME types."""
+    try:
+        with open(filename, "rb") as fp:
+            FALLBACK_MIME_MAP.update(json.load(fp))
+    except FileNotFoundError:
+        pass
+
+
 def mime_parse(mime: str | None) -> Tuple[str | None, str]:
     """Parse MIME type."""
     if mime is None:
@@ -43,10 +55,10 @@ def mime_parse(mime: str | None) -> Tuple[str | None, str]:
     return mime_type, encoding
 
 
-def mime_to_extension(mime: str) -> str:
+def guess_extension_from_mime(mime: Optional[str]) -> Optional[str]:
     """Convert MIME type to extension."""
     if not mime:
-        return ".bin"
+        return None
 
     ext = mimetypes.guess_extension(mime)
     if ext:
@@ -55,4 +67,35 @@ def mime_to_extension(mime: str) -> str:
     if mime in FALLBACK_MIME_MAP:
         return FALLBACK_MIME_MAP[mime]
 
-    return ".bin"
+    return None
+
+
+def guess_extension_from_url_path(path: str) -> Optional[str]:
+    """Guess extension from URL path."""
+    ext = os.path.splitext(path)[1].lower()
+    if ext:
+        return ext
+
+    return None
+
+
+def guess_extension(mime: Optional[str], path: str) -> str:
+    """Guess extension from MIME type and URL path."""
+    uext = guess_extension_from_url_path(path)
+    mext = guess_extension_from_mime(mime)
+
+    if (
+        uext != mext
+        and uext is not None
+        and mext is not None
+        and uext not in mimetypes.types_map
+    ):
+        uext = None
+
+    return uext or mext or ".bin"
+
+
+def exts_type(exts: str) -> List[str]:
+    """Convert exts to list."""
+    # "json,js" -> ["json","js"]
+    return list(set([e.strip().lstrip(".") for e in exts.split(",") if e.strip()]))
