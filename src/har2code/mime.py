@@ -1,10 +1,11 @@
 """Define the tools for MIME type."""
 
-import cgi
 import json
 import mimetypes
 import os
 from typing import List, Optional, Tuple
+
+from .utils import parse_header
 
 _office_document = "application/vnd.openxmlformats-officedocument"
 FALLBACK_MIME_MAP = {
@@ -50,7 +51,7 @@ def mime_parse(mime: str | None) -> Tuple[str | None, str]:
     if mime is None:
         return None, "UTF-8"
 
-    mime_type, params = cgi.parse_header(mime)
+    mime_type, params = parse_header(mime)
     encoding = params.get("charset") or "UTF-8"
     return mime_type, encoding
 
